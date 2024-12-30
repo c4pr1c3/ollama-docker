@@ -4,9 +4,11 @@ WORKDIR /code
 
 COPY ./requirements.txt ./
 
-RUN apt-get update && apt-get install git -y && apt-get install curl -y
+COPY ./sources.list /etc/apt/sources.list
 
-RUN pip install --no-cache-dir -r requirements.txt
+RUN rm -rf /etc/apt/sources.list.d/* && apt-get update && apt-get install git -y && apt-get install curl -y
+
+RUN pip config set global.index-url https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple && pip install --no-cache-dir -r requirements.txt
 
 COPY ./src ./src
 
