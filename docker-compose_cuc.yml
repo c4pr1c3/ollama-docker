@@ -1,0 +1,62 @@
+services:
+  app:
+    build: .
+    ports:
+      - 127.0.0.1:9000:8000
+      - 127.0.0.1:5678:5678
+    volumes:
+      - .:/code
+    command: uvicorn src.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: always
+    depends_on:
+      - ollama
+      - ollama-webui
+    networks:
+      - ollama-docker
+      
+  ollama:
+    volumes:
+      - ./ollama/ollama:/root/.ollama
+    container_name: ollama
+    pull_policy: always
+    tty: true
+    restart: unless-stopped
+    image: ollama/ollama:0.6.2
+    ports:
+      - 127.0.0.1:7870:11434
+    environment:
+      - OLLAMA_KEEP_ALIVE=24h
+      - HF_ENDPOINT=https://hf-mirror.com
+    networks:
+      - ollama-docker
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              capabilities: [gpu]
+
+  ollama-webui:
+    image: ghcr.io/open-webui/open-webui:0.5.20
+    container_name: ollama-webui
+    volumes:
+      - ./ollama/ollama-webui:/app/backend/data
+    depends_on:
+      - ollama
+    ports:
+      - 127.0.0.1:8080:8080
+    environment: # https://docs.openwebui.com/getting-started/env-configuration#default_models
+      - OLLAMA_BASE_URLS=http://host.docker.internal:7870 #comma separated ollama hosts
+      - ENV=dev
+      - WEBUI_AUTH=True
+      - WEBUI_NAME=CUC AI
+      - WEBUI_URL=http://cuc.ai:8080
+      - WEBUI_SECRET_KEY=t0p-s3cr3t
+      - HF_ENDPOINT=https://hf-mirror.com
+    restart: unless-stopped
+    networks:
+      - ollama-docker
+
+networks:
+  ollama-docker:
+    external: false
